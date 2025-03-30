@@ -392,6 +392,9 @@ class Game {
         // First clear destroyed peg positions when moving to a new day
         this.gameBoard.destroyedPegPositions.clear();
         
+        // Shuffle and combine remaining pegs
+        this.gameBoard.shuffleRemainingPegs();
+        
         this.gameState.completeDay();
         
         // Update lives display after restoring lives
@@ -426,8 +429,7 @@ class Game {
         // Switch to shop music
         this.soundSystem.playMusic('shop');
         
-        // Generate new board for next day
-        this.gameBoard.generateBoard();
+        // Reset Numby
         this.resetNumby();
         
         // Update UI

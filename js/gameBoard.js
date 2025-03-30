@@ -214,24 +214,178 @@ export class GameBoard {
         console.log(`Grid: ${cols}x${rows}, Active pegs: ${this.pegs.length}/${rows*cols}`);
     }
 
-    // Calculate peg score with more gradual progression
+    // Calculate peg score based on day
     calculatePegScore(row, totalRows) {
         if (this.gameState.day === 1) {
             return 1; // Day 1: All pegs are worth 1
         }
         
-        // For later days: more gradual doubling based on row position
-        const rowValue = totalRows - row; // 5 at top, 1 at bottom
+        // Base value scales with day
+        const baseValue = Math.max(1, Math.floor(Math.log2(this.gameState.day)));
         
-        // Day affects score more gradually, higher rows still worth more
-        const dayFactor = Math.floor(Math.log2(this.gameState.day) + 1);
-        const exponent = rowValue === 1 ? dayFactor : // Bottom row doubles every day
-                        rowValue === 2 ? Math.floor(dayFactor * 0.8) : // Second row doubles more slowly
-                        rowValue === 3 ? Math.floor(dayFactor * 0.6) : // Middle row
-                        rowValue === 4 ? Math.floor(dayFactor * 0.4) : // Second from top
-                        Math.floor(dayFactor * 0.3); // Top row doubles very slowly
+        // Higher rows worth more (5 at top, 1 at bottom)
+        const rowValue = totalRows - row;
         
-        return Math.pow(2, exponent);
+        // Calculate score based on row position and day
+        const score = baseValue * Math.pow(2, rowValue - 1);
+        
+        return Math.max(1, score);
+    }
+    
+    // New method to shuffle remaining pegs after day completion
+    shuffleRemainingPegs() {
+        // Save active peg positions
+        const activePegPositions = this.pegs.map(peg => ({
+            row: peg.row,
+            col: peg.col,
+            score: peg.score
+        }));
+        
+        // Remove existing pegs but keep their data
+        const pegContainer = this.boardElement;
+        while (pegContainer.firstChild) {
+            pegContainer.removeChild(pegContainer.firstChild);
+        }
+        
+        // Clear peg array but keep the data for later
+        const previousPegs = [...this.pegs];
+        this.pegs = [];
+        
+        // Calculate available grid positions
+        const availablePositions = [];
+        const occupiedKeys = new Set();
+        const rows = this.gridLayout.rows;
+        const cols = this.gridLayout.cols;
+        
+        // Add all available grid positions (that aren't destroyed)
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const gridKey = `${row},${col}`;
+                if (!this.destroyedPegPositions.has(gridKey)) {
+                    const x = this.gridLayout.wallToCenter + col * this.gridLayout.effectiveCenterToCenter;
+                    const y = this.gridLayout.topMargin + row * this.gridLayout.effectiveCenterToCenter;
+                    
+                    availablePositions.push({
+                        x, y, row, col, gridKey,
+                        score: this.calculatePegScore(row, rows)
+                    });
+                }
+            }
+        }
+        
+        // Calculate how many pegs to keep
+        const pegsToPlace = Math.min(previousPegs.length, this.maxPegs);
+        
+        // Shuffle available positions
+        this.shuffleArray(availablePositions);
+        
+        // First pass: place pegs from previous day in new positions
+        const shuffledPegs = this.shuffleArray([...previousPegs]);
+        for (let i = 0; i < pegsToPlace; i++) {
+            if (i < shuffledPegs.length && i < availablePositions.length) {
+                const position = availablePositions[i];
+                const previousPeg = shuffledPegs[i];
+                
+                // Track as occupied
+                occupiedKeys.add(position.gridKey);
+                
+                // Add peg at new position with previous score
+                this.addPeg(position.x, position.y, previousPeg.score, position.row, position.col);
+            }
+        }
+        
+        // Fill remaining spots with new pegs
+        const remainingPositions = availablePositions.filter(pos => !occupiedKeys.has(pos.gridKey));
+        const spotsToFill = Math.min(remainingPositions.length, this.maxPegs - this.pegs.length);
+        
+        for (let i = 0; i < spotsToFill; i++) {
+            const position = remainingPositions[i];
+            this.addPeg(position.x, position.y, position.score, position.row, position.col);
+        }
+        
+        // Combine similar pegs
+        this.combineNeighborPegs();
+        
+        // Save the new initial day state
+        this.saveInitialDayState(true);
+    }
+    
+    // New method to combine neighboring pegs with similar values
+    combineNeighborPegs() {
+        // Sort pegs by score (highest to lowest)
+        const sortedPegs = [...this.pegs].sort((a, b) => b.score - a.score);
+        
+        // Early exit if not enough pegs
+        if (sortedPegs.length < 2) return;
+        
+        // Keep track of which pegs have been combined
+        const combinedPegIds = new Set();
+        
+        // Combine the top-scoring pegs (highest numbers combine)
+        // Only combine up to 30% of the pegs
+        const combinationsToMake = Math.floor(sortedPegs.length * 0.3);
+        
+        for (let i = 0; i < combinationsToMake * 2; i += 2) {
+            // Make sure we have at least 2 pegs left to combine
+            if (i + 1 >= sortedPegs.length) break;
+            
+            const pegA = sortedPegs[i];
+            const pegB = sortedPegs[i + 1];
+            
+            // Skip if either peg was already combined
+            if (combinedPegIds.has(pegA.id) || combinedPegIds.has(pegB.id)) continue;
+            
+            // Combine the pegs (add B's value to A)
+            const newScore = pegA.score + pegB.score;
+            
+            // Update the higher-value peg
+            this.updatePegScore(pegA.id, newScore);
+            
+            // Mark both pegs as combined
+            combinedPegIds.add(pegA.id);
+            combinedPegIds.add(pegB.id);
+            
+            // Add a visual effect to show the combination
+            this.addCombineEffect(pegA.x, pegA.y, pegB.x, pegB.y, pegA.id);
+        }
+    }
+    
+    // Add visual effect for peg combining
+    addCombineEffect(x1, y1, x2, y2, targetId) {
+        // Create a line between the two pegs
+        const effectLine = document.createElement('div');
+        effectLine.className = 'combine-effect-line';
+        effectLine.style.position = 'absolute';
+        
+        // Calculate line length and angle
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        
+        // Position and rotate the line
+        effectLine.style.width = `${length}px`;
+        effectLine.style.left = `${x1}px`;
+        effectLine.style.top = `${y1}px`;
+        effectLine.style.transformOrigin = '0 0';
+        effectLine.style.transform = `rotate(${angle}deg)`;
+        
+        // Add to board
+        this.boardElement.appendChild(effectLine);
+        
+        // Add a pulse effect to the target peg
+        const targetPeg = this.pegs.find(peg => peg.id === targetId);
+        if (targetPeg && targetPeg.element) {
+            targetPeg.element.classList.add('peg-combined');
+            setTimeout(() => {
+                targetPeg.element.classList.remove('peg-combined');
+            }, 1000);
+        }
+        
+        // Remove the effect after animation
+        setTimeout(() => {
+            effectLine.remove();
+        }, 1000);
     }
 
     // Shuffle array in place (Fisher-Yates algorithm)

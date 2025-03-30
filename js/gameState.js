@@ -28,29 +28,29 @@ export class GameState {
 
     calculateDailyQuota() {
         if (this.day === 1) {
-            return 50; // Very easy first day
+            return 5; // Much easier first day starting at 5 instead of 50
         }
 
         // Base quota scaling
         let baseQuota;
         if (this.day <= 10) {
             // Days 1-10: Very gentle scaling
-            baseQuota = 50 + (this.day - 1) * 25;
+            baseQuota = 5 + (this.day - 1) * 5;
         } else if (this.day <= 30) {
             // Days 11-30: Moderate scaling
-            baseQuota = 275 + (this.day - 10) * 40;
+            baseQuota = 50 + (this.day - 10) * 10;
         } else if (this.day <= 60) {
             // Days 31-60: More challenging scaling
             const daysPast30 = this.day - 30;
-            baseQuota = 1075 + daysPast30 * 75;
+            baseQuota = 250 + daysPast30 * 25;
         } else if (this.day <= 100) {
             // Days 61-100: Final challenge scaling
             const daysPast60 = this.day - 60;
-            baseQuota = 3325 + daysPast60 * 150;
+            baseQuota = 1000 + daysPast60 * 50;
         } else {
             // Post day 100: Endless mode with steeper scaling
             const daysPast100 = this.day - 100;
-            baseQuota = 9325 + daysPast100 * 300;
+            baseQuota = 3000 + daysPast100 * 100;
         }
 
         // Apply daily challenge modifier if active
