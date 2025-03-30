@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+    <title>Numby's Number Factory</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>Numby's Number Factory</h1>
+            <div class="stats-bar">
+                <div class="quota">Daily Quota: <span id="quota-value">0</span></div>
+                <div class="current-score">Current Total: <span id="score-value">0</span></div>
+                <div class="day-counter">Day: <span id="day-value">1</span></div>
+                <div class="controls">
+                    <button id="achievements-btn" title="Achievements">🏆</button>
+                    <button id="stats-btn" title="Statistics">📊</button>
+                    <button id="sound-btn" title="Toggle Sound">🔊</button>
+                    <button id="music-btn" title="Toggle Music">🎵</button>
+                    <button id="help-btn" title="Help">❓</button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="game-board">
+            <div id="pegboard"></div>
+            <div id="numby" class="character"></div>
+            <div class="angle-control">
+                <span id="angle-value">90°</span>
+            </div>
+        </div>
+        
+        <div class="inventory">
+            <h3>Items</h3>
+            <div id="item-container"></div>
+        </div>
+        
+        <div class="game-messages">
+            <div id="message-log"></div>
+        </div>
+    </div>
+    
+    <div id="game-over" class="modal hidden">
+        <div class="modal-content">
+            <h2>CATASTROPHIC FAILURE</h2>
+            <p>You failed to meet your quota!</p>
+            <div class="failure-animation"></div>
+            <p>The sun has exploded. Time and space are unraveling.</p>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="restart-btn">Start New Job</button>
+        </div>
+    </div>
+    
+    <div id="help-modal" class="modal hidden">
+        <div class="modal-content help-content">
+            <h2>How to Play</h2>
+            <div class="help-section">
+                <h3>Basic Controls</h3>
+                <p>1. Move your mouse to aim, then click to launch Numby towards your mouse pointer</p>
+                <p>2. Try to bounce off the pegs as Numby falls</p>
+            </div>
+            <div class="help-section">
+                <h3>Objectives</h3>
+                <p>• Bounce off pegs to collect their point value - each hit halves a peg's value</p>
+                <p>• Higher pegs are worth more points!</p>
+                <p>• Meet your daily quota to progress</p>
+                <p>• Each day, pegs can increase in value and quota gets higher</p>
+                <p>• Collect items to enhance your abilities</p>
+                <p>• Survive as many days as possible</p>
+            </div>
+            <div class="help-section">
+                <h3>Tips</h3>
+                <p>• Try to bounce Numby up into higher-value pegs at the top</p>
+                <p>• Items stack in interesting ways - experiment!</p>
+                <p>• Look for brighter pegs which have higher point values</p>
+                <p>• The quota increases each day, so choose items wisely</p>
+            </div>
+            <button id="close-help-btn">Close</button>
+        </div>
+    </div>
+    
+    <div id="stats-modal" class="modal hidden">
+        <div class="modal-content stats-content">
+            <h2>Factory Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-games-played">0</div>
+                    <div class="stat-label">Jobs Attempted</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-highest-day">0</div>
+                    <div class="stat-label">Longest Employment</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-numbers-generated">0</div>
+                    <div class="stat-label">Numbers Generated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-largest-number">0</div>
+                    <div class="stat-label">Largest Number</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-pegs-hit">0</div>
+                    <div class="stat-label">Pegs Bounced</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-items-collected">0</div>
+                    <div class="stat-label">Items Collected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-total-score">0</div>
+                    <div class="stat-label">Total Score</div>
+                </div>
+            </div>
+            <button id="close-stats-btn">Close</button>
+        </div>
+    </div>
+    
+    <script src="js/main.js" type="module"></script>
+</body>
+</html>
