@@ -6,7 +6,7 @@ export class GameState {
     reset() {
         this.currentScore = 0;
         this.day = 1;
-        this.quota = this.calculateQuota(this.day);
+        this.quota = this.calculateDailyQuota();
         this.runEnded = false;
         this.items = [];
         this.synergies = [];
@@ -26,46 +26,60 @@ export class GameState {
         this.currentScore += value;
     }
 
-    calculateQuota(day) {
-        // Start with a lower quota (5) on day 1
-        // Scale based on peg values and doubling mechanics
-        // Day 1: 5
-        // Day 2: ~12
-        // Day 3: ~25
-        // Day 4: ~50
-        // etc. - scaling with the expected peg value progression
-        
-        if (day === 1) return 5; // Fixed day 1 quota
-        
-        // For later days, scale with expected peg score progression
-        // This considers that higher-tiered pegs double approximately every 2-3 days
-        // and that there are 15 pegs with an average value that scales with day number
-        const baseQuota = 5;
-        const growthRate = 1.8; // Slightly less than doubling each day
-        
-        return Math.floor(baseQuota * Math.pow(growthRate, day - 1));
+    calculateDailyQuota() {
+        if (this.day === 1) {
+            return 50; // Very easy first day
+        }
+
+        // Base quota scaling
+        let baseQuota;
+        if (this.day <= 10) {
+            // Days 1-10: Very gentle scaling
+            baseQuota = 50 + (this.day - 1) * 25;
+        } else if (this.day <= 30) {
+            // Days 11-30: Moderate scaling
+            baseQuota = 275 + (this.day - 10) * 40;
+        } else if (this.day <= 60) {
+            // Days 31-60: More challenging scaling
+            const daysPast30 = this.day - 30;
+            baseQuota = 1075 + daysPast30 * 75;
+        } else if (this.day <= 100) {
+            // Days 61-100: Final challenge scaling
+            const daysPast60 = this.day - 60;
+            baseQuota = 3325 + daysPast60 * 150;
+        } else {
+            // Post day 100: Endless mode with steeper scaling
+            const daysPast100 = this.day - 100;
+            baseQuota = 9325 + daysPast100 * 300;
+        }
+
+        // Apply daily challenge modifier if active
+        if (this.dailyChallenge && this.dailyChallenge.quotaModifier) {
+            baseQuota *= this.dailyChallenge.quotaModifier;
+        }
+
+        return Math.floor(baseQuota);
     }
 
     completeDay() {
-        // Calculate how many lives to restore based on score relative to quota
-        let livesToRestore = 0;
-        let scoreMultiple = this.currentScore / this.quota;
+        this.day++;
         
-        while (scoreMultiple >= 1 && livesToRestore < this.maxLives) {
-            livesToRestore++;
-            scoreMultiple /= 2; // Divide by 2 for each level of achievement
+        // Bonus life every 10 days until day 100
+        if (this.day % 10 === 0 && this.day <= 100) {
+            this.lives = Math.min(this.lives + 2, this.maxLives);
+        } else {
+            // Regular completion restores 1 life
+            this.lives = Math.min(this.lives + 1, this.maxLives);
         }
         
-        // Restore lives, up to the maximum
-        this.lives = Math.min(this.lives + livesToRestore, this.maxLives);
-        
-        this.day++;
+        // Reset score for next day
         this.currentScore = 0;
-        this.quota = this.calculateQuota(this.day);
-        this.runEnded = false;
+        
+        // Calculate new quota
+        this.quota = this.calculateDailyQuota();
+        
+        // Clear any temporary effects
         this.temporaryEffects = [];
-        this.consecutiveHits = 0;
-        this.dailyChallenge = null; // Clear previous day's challenge
     }
 
     endGame() {

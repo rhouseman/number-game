@@ -43,6 +43,8 @@ class Game {
         // Make items accessible globally within the game
         this.items = this.gameState.items;
 
+        this.boundSpeakGameOver = null; // Add property to store bound function
+
         this.initialize();
     }
 
@@ -189,6 +191,12 @@ class Game {
     }
 
     restartGame() {
+        // Clear the game over timeout and listener
+        if (this.boundSpeakGameOver) {
+            clearTimeout(this.gameOverTimeout);
+            this.boundSpeakGameOver = null;
+        }
+        
         // Reset destroyed peg positions on game restart
         if (this.gameBoard) {
             this.gameBoard.destroyedPegPositions.clear();
@@ -445,12 +453,18 @@ class Game {
         this.soundSystem.playSound('game_over');
         this.soundSystem.playMusic('game_over');
         
-        // Speak the game over message after a short delay
-        setTimeout(() => {
-            this.soundSystem.speakGameOverMessage();
-        }, 1500); // Wait for explosion animation to start
+        // Clear any existing timeout and remove old listener
+        if (this.boundSpeakGameOver) {
+            clearTimeout(this.gameOverTimeout);
+        }
         
-        // Items are reset in gameState.reset(), which is called in restartGame()
+        // Create new bound function and store it
+        this.boundSpeakGameOver = () => {
+            this.soundSystem.speakGameOverMessage();
+        };
+        
+        // Set new timeout with new listener
+        this.gameOverTimeout = setTimeout(this.boundSpeakGameOver, 1500);
     }
     
     toggleSound() {

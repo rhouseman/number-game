@@ -151,6 +151,18 @@ h1 {
     transform: translate(-50%, -50%);
 }
 
+/* Character styling */
+#numby {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-color: #FF5722;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
 #Numby {
     position: absolute;
     width: 30px;

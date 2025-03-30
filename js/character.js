@@ -2,7 +2,7 @@ export class Character {
     constructor(gameState, gameBoard) {
         this.gameState = gameState;
         this.gameBoard = gameBoard;
-        this.element = document.getElementById('Numby');
+        this.element = document.getElementById('numby'); // Changed 'Numby' to 'numby' to match the HTML
         this.x = 0;
         this.y = 0;
         this.vx = 0;
@@ -11,7 +11,7 @@ export class Character {
         this.isActive = false;
         this.gravity = 0.2;
         this.friction = 0.98;
-        this.elasticity = 0.9; // Increased from 0.7 for more bounce
+        this.elasticity = 0.95; // Increased from 0.9 for more bounce
     }
 
     setPosition(x, y) {
@@ -103,23 +103,19 @@ export class Character {
         const dot = this.vx * nx + this.vy * ny;
         
         // Calculate reflection with enhanced bounce for pinball feel
-        // Add a minimum velocity boost when bounce is too weak
-        const velocityMagnitude = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        const boostFactor = 1.3; // Energetic bounces for pinball feel
+        const boostFactor = 1.5; // Increased from 1.3 for more energetic bounces
         
         // Apply bounce with boost
         this.vx = (this.vx - 2 * dot * nx) * this.elasticity * boostFactor;
         this.vy = (this.vy - 2 * dot * ny) * this.elasticity * boostFactor;
         
         // Apply minimum upward velocity on hits with downward momentum
-        // This gives a more satisfying pinball effect with the 5x5 grid
         if (this.vy > 0) {
-            // Give it more upward bounce when moving downward
-            const upwardBoost = 0.5; // Increased to work well with 5x5 grid spacing
-            this.vy = Math.min(this.vy * 0.5, 0) - (velocityMagnitude * upwardBoost);
+            const upwardBoost = 0.8; // Increased from 0.5 for stronger upward bounce
+            this.vy = Math.min(this.vy * 0.5, 0) - (Math.sqrt(this.vx * this.vx + this.vy * this.vy) * upwardBoost);
         }
         
-        // Ensure character doesn't get stuck inside peg by pushing it out
+        // Ensure character doesn't get stuck inside peg
         const minDist = this.radius + this.gameBoard.pegRadius;
         if (dist < minDist) {
             this.x = pegX + nx * minDist;

@@ -4,16 +4,27 @@ export class ItemSystem {
         this.character = character;
         this.uiManager = null;
         this.items = [];
-        this.itemDefinitions = this.initializeItemDefinitions();
+        
+        // Initialize all item definitions by rarity tier
+        this.commonItemDefinitions = this.initializeCommonItemDefinitions();
         this.rareItemDefinitions = this.initializeRareItemDefinitions();
+        this.legendaryItemDefinitions = this.initializeLegendaryItemDefinitions();
+        
+        // Combined list for easy access
+        this.allItemDefinitions = [
+            ...this.commonItemDefinitions,
+            ...this.rareItemDefinitions,
+            ...this.legendaryItemDefinitions
+        ];
     }
-
+    
     setUIManager(uiManager) {
         this.uiManager = uiManager;
     }
-
-    initializeItemDefinitions() {
-        const baseItems = [
+    
+    initializeCommonItemDefinitions() {
+        // COMMON ITEMS (80%) - 40 items
+        return [
             {
                 id: 'multiplier',
                 name: 'Number Multiplier',
@@ -155,10 +166,7 @@ export class ItemSystem {
                         return value + sum;
                     }
                 }
-            }
-        ];
-
-        const additionalItems = [
+            },
             {
                 id: 'prime_specialist',
                 name: 'Prime Specialist',
@@ -295,142 +303,499 @@ export class ItemSystem {
                 synergies: ['percentage_boost']
             }
         ];
-
-        return [...baseItems, ...additionalItems];
     }
-
+    
     initializeRareItemDefinitions() {
+        // RARE ITEMS (15%) - 7 items
         return [
             {
-                id: 'golden_Numby',
-                name: 'Golden Numby',
-                icon: '🌟',
-                description: 'All numbers are increased by 50% and have a chance to spawn additional nodes.',
+                id: 'platinum_calculator',
+                name: 'Platinum Calculator',
+                icon: '📱',
+                description: 'Increases number values by 30%',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Increases number values by {VALUE}%',
+                upgradeValue: [30, 40, 50, 60, 75],
                 effect: {
                     type: 'onNumberHit',
-                    action: (value, nodeType, node, game) => {
-                        // Chance to spawn an additional node
-                        if (Math.random() < 0.25) {
-                            const board = game.gameBoard;
-                            const x = Math.random() * (board.boardRect.width - 2 * board.nodeRadius) + board.nodeRadius;
-                            const y = Math.random() * (board.boardRect.height - 200 - 2 * board.nodeRadius) + board.nodeRadius + 50;
-                            board.addNumberNode(x, y, Math.floor(value / 2));
-                            game.uiManager.addMessage("✨ Golden Numby created an additional node!");
-                        }
-                        
-                        return Math.floor(value * 1.5);
-                    }
-                },
-                rarity: 'rare'
+                    action: (value) => Math.floor(value * 1.3)
+                }
             },
             {
-                id: 'Numby_aura',
-                name: 'Numby\'s Aura',
-                icon: '⭐',
-                description: 'Numby automatically attracts nearby number nodes to itself.',
+                id: 'super_bouncer',
+                name: 'Super Bouncer',
+                icon: '🔄',
+                description: 'Increases elasticity by 20% and adds velocity on bounce',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Increases elasticity by {VALUE}% and adds velocity on bounce',
+                upgradeValue: [20, 25, 30, 35, 40],
+                effect: {
+                    type: 'onCharacterInit',
+                    action: (character) => {
+                        // Store the original bounceOff method
+                        const originalBounceOff = character.bounceOff;
+                        
+                        // Override with enhanced version
+                        character.bounceOff = function(pegX, pegY) {
+                            // Call original bounce logic
+                            originalBounceOff.call(this, pegX, pegY);
+                            
+                            // Add extra velocity after bounce
+                            const boost = 1.2;
+                            this.vx *= boost;
+                            this.vy *= boost;
+                        };
+                        
+                        // Also increase elasticity
+                        character.elasticity = Math.min(character.elasticity * 1.2, 0.99);
+                        
+                        return character;
+                    }
+                }
+            },
+            {
+                id: 'multiplier_magic',
+                name: 'Multiplier Magic',
+                icon: '✖️',
+                description: 'Multiplies all number values by 1.5',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Multiplies all number values by {VALUE}',
+                upgradeValue: [1.5, 1.65, 1.8, 1.95, 2.1],
+                effect: {
+                    type: 'onNumberHit',
+                    action: (value) => Math.floor(value * 1.5)
+                }
+            },
+            {
+                id: 'peg_destroyer',
+                name: 'Peg Destroyer',
+                icon: '💥',
+                description: 'Pegs have 20% chance to be destroyed with full value',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Pegs have {VALUE}% chance to be destroyed with full value',
+                upgradeValue: [20, 30, 40, 50, 60],
+                effect: {
+                    type: 'onPegHit',
+                    action: (value, pegData, peg, game) => {
+                        if (Math.random() < 0.2) {
+                            // This peg will be destroyed by the game board logic
+                            // Return full value before reduction
+                            return pegData ? pegData.originalScore || value : value;
+                        }
+                        return value;
+                    }
+                }
+            },
+            {
+                id: 'special_attractor',
+                name: 'Special Attractor',
+                icon: '🌠',
+                description: 'Special nodes attracted to Numby',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Special nodes attracted to Numby with {VALUE}× strength',
+                upgradeValue: [1, 1.5, 2, 2.5, 3],
                 effect: {
                     type: 'onUpdate',
                     action: (character, gameBoard) => {
                         const position = character.getPosition();
-                        const attractionRadius = 100;
+                        const attractionRadius = 150;
                         
                         gameBoard.numberNodes.forEach(node => {
-                            const dx = position.x - node.x;
-                            const dy = position.y - node.y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            
-                            if (distance < attractionRadius) {
-                                // Move node slightly towards Numby
-                                const moveSpeed = 0.5;
-                                const angle = Math.atan2(dy, dx);
+                            if (node.type === 'special') {
+                                const dx = position.x - node.x;
+                                const dy = position.y - node.y;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
                                 
-                                node.x += Math.cos(angle) * moveSpeed;
-                                node.y += Math.sin(angle) * moveSpeed;
-                                
-                                // Update DOM element position
-                                node.element.style.left = `${node.x}px`;
-                                node.element.style.top = `${node.y}px`;
+                                if (distance < attractionRadius) {
+                                    // Move node towards Numby
+                                    const moveSpeed = 1;
+                                    const angle = Math.atan2(dy, dx);
+                                    
+                                    node.x += Math.cos(angle) * moveSpeed;
+                                    node.y += Math.sin(angle) * moveSpeed;
+                                    
+                                    if (node.element) {
+                                        node.element.style.left = `${node.x}px`;
+                                        node.element.style.top = `${node.y}px`;
+                                    }
+                                }
                             }
                         });
                     }
-                },
-                rarity: 'rare'
+                }
             },
             {
-                id: 'factory_overflow',
-                name: 'Factory Overflow',
-                icon: '🏭',
-                description: 'Numbers over 100 explode into multiple smaller nodes.',
+                id: 'node_duplicator',
+                name: 'Node Duplicator',
+                icon: '🧬',
+                description: '10% chance to create duplicate node on hit',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: '{VALUE}% chance to create duplicate node on hit',
+                upgradeValue: [10, 15, 20, 25, 30],
                 effect: {
                     type: 'onNumberHit',
                     action: (value, nodeType, node, game) => {
-                        if (value > 100) {
+                        if (Math.random() < 0.1 && game && game.gameBoard) {
                             setTimeout(() => {
-                                const numNodes = 2 + Math.floor(Math.random() * 3);
-                                game.gameBoard.createMultipleNodes(node.x, node.y, numNodes, 
-                                    Math.floor(value / numNodes));
-                                game.uiManager.addMessage("🏭 Factory Overflow created additional nodes!");
+                                const board = game.gameBoard;
+                                const x = Math.random() * (board.boardRect.width - 40) + 20;
+                                const y = Math.random() * (board.boardRect.height - 200) + 50;
+                                board.addNumberNode(x, y, Math.floor(value * 0.5), nodeType);
+                                game.uiManager.addMessage("🧬 Node duplicated!");
                             }, 100);
                         }
                         return value;
                     }
-                },
-                rarity: 'rare'
+                }
             },
             {
-                id: 'time_warp',
-                name: 'Time Warp',
-                icon: '⏱️',
-                description: 'Gravity and friction are dramatically reduced, allowing for longer bounces.',
+                id: 'combo_master',
+                name: 'Combo Master',
+                icon: '🔥',
+                description: 'Each consecutive hit gives +5% points, stacking up to 100%',
+                rarity: 'rare',
+                level: 1,
+                upgradeDescription: 'Each consecutive hit gives +{VALUE}% points, stacking up to 100%',
+                upgradeValue: [5, 7, 10, 12, 15],
                 effect: {
-                    type: 'onCharacterInit',
-                    action: (character) => {
-                        character.gravity *= 0.4;
-                        character.friction = Math.min(character.friction * 1.4, 0.999);
-                        character.elasticity = Math.min(character.elasticity * 1.3, 0.99);
-                        return character;
+                    type: 'onRun',
+                    action: () => {
+                        if (!this.gameState.consecutiveHits) {
+                            this.gameState.consecutiveHits = 0;
+                        }
+                        
+                        // Cap bonus at 100%
+                        const bonus = Math.min(this.gameState.consecutiveHits * 0.05, 1.0);
+                        return 1 + bonus;
                     }
-                },
-                rarity: 'rare'
+                }
             }
         ];
     }
 
+    initializeLegendaryItemDefinitions() {
+        // LEGENDARY ITEMS (5%) - 3 items
+        return [
+            {
+                id: 'divine_multiplier',
+                name: 'Divine Multiplier',
+                icon: '🌟',
+                description: 'All peg and node values are doubled, and pegs lose value 25% more slowly',
+                rarity: 'legendary',
+                level: 1,
+                upgradeDescription: 'All values {VALUE}×, pegs lose value {VALUE2}% more slowly',
+                upgradeValue: [2, 2.5, 3, 3.5, 4],
+                upgradeValue2: [25, 30, 35, 40, 45],
+                effect: {
+                    type: 'onNumberHit',
+                    action: (value) => Math.floor(value * 2)
+                },
+                secondaryEffect: {
+                    type: 'onPegHit',
+                    action: (value, pegData, peg, game) => {
+                        // Return 75% of value instead of 50%
+                        return Math.floor(value * 0.75);
+                    }
+                }
+            },
+            {
+                id: 'peg_master',
+                name: 'Peg Master',
+                icon: '👑',
+                description: 'Pegs retain full value on first hit, then follow normal halving',
+                rarity: 'legendary',
+                level: 1,
+                upgradeDescription: 'Pegs retain full value for {VALUE} hits',
+                upgradeValue: [1, 2, 2, 3, 3],
+                effect: {
+                    type: 'onPegHit',
+                    action: (value, pegData) => {
+                        if (!pegData.hitCount || pegData.hitCount === 0) {
+                            pegData.hitCount = 1;
+                            return value; // First hit returns full value
+                        }
+                        return Math.floor(value / 2); // Subsequent hits follow normal halving
+                    }
+                }
+            },
+            {
+                id: 'score_chain',
+                name: 'Score Chain',
+                icon: '⚡',
+                description: 'Each consecutive peg hit doubles its bonus value',
+                rarity: 'legendary',
+                level: 1,
+                upgradeDescription: 'Each consecutive hit multiplies bonus by {VALUE}',
+                upgradeValue: [2, 2.5, 3, 3.5, 4],
+                effect: {
+                    type: 'onPegHit',
+                    action: (value) => {
+                        if (!this.gameState.chainCount) {
+                            this.gameState.chainCount = 0;
+                        }
+                        this.gameState.chainCount++;
+                        const multiplier = Math.pow(2, Math.min(this.gameState.chainCount - 1, 5));
+                        return Math.floor(value * multiplier);
+                    }
+                }
+            }
+        ];
+    }
+    
+    // Method to generate a random item with proper rarity distribution
     generateRandomItem() {
-        const availableItems = this.itemDefinitions.filter(item => 
-            !this.items.some(playerItem => playerItem.id === item.id)
-        );
+        // Define rarity chances
+        const LEGENDARY_CHANCE = 0.05; // 5%
+        const RARE_CHANCE = 0.15;      // 15%
+        // Common is 80% (remainder)
         
-        const itemPool = availableItems.length > 0 ? availableItems : this.itemDefinitions;
+        // Roll for rarity
+        const rarityRoll = Math.random();
         
-        const randomIndex = Math.floor(Math.random() * itemPool.length);
-        return itemPool[randomIndex];
+        let itemPool;
+        
+        if (rarityRoll < LEGENDARY_CHANCE) {
+            // Legendary item (5% chance)
+            itemPool = this.legendaryItemDefinitions;
+        } else if (rarityRoll < LEGENDARY_CHANCE + RARE_CHANCE) {
+            // Rare item (15% chance)
+            itemPool = this.rareItemDefinitions;
+        } else {
+            // Common item (80% chance)
+            itemPool = this.commonItemDefinitions;
+        }
+        
+        // Check if we already have any of these items (for potential upgrades)
+        const upgradeableItems = [];
+        
+        itemPool.forEach(itemDef => {
+            const existingItem = this.items.find(i => i.id === itemDef.id);
+            if (existingItem && existingItem.level < 5) {
+                upgradeableItems.push(existingItem);
+            }
+        });
+        
+        // 40% chance to upgrade if we have upgradeable items
+        if (upgradeableItems.length > 0 && Math.random() < 0.4) {
+            const itemToUpgrade = upgradeableItems[Math.floor(Math.random() * upgradeableItems.length)];
+            return this.createUpgradedItem(itemToUpgrade);
+        }
+        
+        // Otherwise, filter out maxed items
+        const availableItems = itemPool.filter(itemDef => {
+            const existingItem = this.items.find(i => i.id === itemDef.id);
+            return !existingItem || existingItem.level < 5;
+        });
+        
+        // If no available items in the chosen rarity, go down a tier
+        if (availableItems.length === 0) {
+            if (itemPool === this.legendaryItemDefinitions) {
+                return this.generateRandomItemFromPool(this.rareItemDefinitions);
+            } else if (itemPool === this.rareItemDefinitions) {
+                return this.generateRandomItemFromPool(this.commonItemDefinitions);
+            } else {
+                // All common items maxed out (very unlikely)
+                // Return a random item that can potentially be upgraded
+                const availableForUpgrade = this.allItemDefinitions.filter(itemDef => {
+                    const existingItem = this.items.find(i => i.id === itemDef.id);
+                    return existingItem && existingItem.level < 5;
+                });
+                
+                if (availableForUpgrade.length > 0) {
+                    const baseItem = this.items.find(i => 
+                        i.id === availableForUpgrade[Math.floor(Math.random() * availableForUpgrade.length)].id
+                    );
+                    return this.createUpgradedItem(baseItem);
+                }
+                
+                // If absolutely everything is maxed out, just return a random item
+                return this.allItemDefinitions[Math.floor(Math.random() * this.allItemDefinitions.length)];
+            }
+        }
+        
+        // Return a random item from available items
+        return availableItems[Math.floor(Math.random() * availableItems.length)];
     }
-
-    generateRareItem() {
-        const randomIndex = Math.floor(Math.random() * this.rareItemDefinitions.length);
-        return this.rareItemDefinitions[randomIndex];
+    
+    generateRandomItemFromPool(itemPool) {
+        // Filter out maxed items
+        const availableItems = itemPool.filter(itemDef => {
+            const existingItem = this.items.find(i => i.id === itemDef.id);
+            return !existingItem || existingItem.level < 5;
+        });
+        
+        if (availableItems.length === 0) {
+            return null; // No available items
+        }
+        
+        return availableItems[Math.floor(Math.random() * availableItems.length)];
     }
-
+    
+    // Create an upgraded version of an existing item
+    createUpgradedItem(baseItem) {
+        // Find the item definition
+        const itemDef = this.allItemDefinitions.find(def => def.id === baseItem.id);
+        if (!itemDef || baseItem.level >= 5) return null;
+        
+        // Create a new item based on the definition, but with upgraded values
+        const nextLevel = baseItem.level + 1;
+        const upgradedItem = {
+            ...itemDef,
+            level: nextLevel,
+            isUpgrade: true,
+            baseItemId: baseItem.id
+        };
+        
+        // Update description based on upgrade values
+        if (itemDef.upgradeDescription && itemDef.upgradeValue) {
+            const upgradeValue = itemDef.upgradeValue[nextLevel - 1];
+            upgradedItem.description = itemDef.upgradeDescription.replace('{VALUE}', upgradeValue);
+            
+            // Handle secondary upgrade value if present
+            if (itemDef.upgradeValue2) {
+                const upgradeValue2 = itemDef.upgradeValue2[nextLevel - 1];
+                upgradedItem.description = upgradedItem.description.replace('{VALUE2}', upgradeValue2);
+            }
+        }
+        
+        // Update the effect based on the upgrade level
+        if (itemDef.effect && itemDef.effect.type === 'onNumberHit') {
+            const upgradeModifier = itemDef.upgradeValue[nextLevel - 1] / itemDef.upgradeValue[0];
+            
+            upgradedItem.effect = {
+                type: itemDef.effect.type,
+                action: this.createUpgradedEffect(itemDef.effect.action, upgradeModifier, itemDef.effect.type)
+            };
+        }
+        
+        return upgradedItem;
+    }
+    
+    createUpgradedEffect(originalAction, upgradeModifier, effectType) {
+        // Create a new effect function with upgraded values
+        if (effectType === 'onNumberHit') {
+            return (value, ...args) => {
+                const baseResult = originalAction(value, ...args);
+                const increase = (baseResult - value) * upgradeModifier;
+                return Math.floor(value + increase);
+            };
+        }
+        
+        // For other effect types, return the original action
+        return originalAction;
+    }
+    
+    // Add an item to the player's inventory
     addItem(item) {
+        // Check if this is an upgrade
+        if (item.isUpgrade && item.baseItemId) {
+            // Find the existing item
+            const existingItemIndex = this.items.findIndex(i => i.id === item.baseItemId);
+            if (existingItemIndex !== -1) {
+                // Replace the existing item with the upgrade
+                this.items[existingItemIndex] = item;
+                
+                // Apply the effects of the upgraded item
+                if (item.effect.type === 'onCharacterInit') {
+                    item.effect.action(this.character);
+                }
+                
+                // Update UI
+                if (this.uiManager) {
+                    this.uiManager.updateInventory(this.items);
+                    this.uiManager.addMessage(`🔼 Upgraded ${item.name} to level ${item.level}!`);
+                    this.uiManager.showUpgradeEffect(item);
+                }
+                
+                return;
+            }
+        }
+        
+        // Regular item addition
         this.items.push(item);
         this.gameState.items = this.items;
         
+        // Apply immediate effects
         if (item.effect.type === 'onCharacterInit') {
             item.effect.action(this.character);
         }
         
+        // Apply any day start effects
+        if (item.effect.type === 'onDayStart') {
+            item.effect.action();
+        }
+        
+        // Record stat
         if (this.gameState.statsSystem) {
             this.gameState.statsSystem.recordItemCollected();
         }
         
+        // Update UI
         if (this.uiManager) {
             this.uiManager.updateInventory(this.items);
         }
         
         this.checkForSynergies(item);
     }
-
+    
+    // Apply item effects on various game events
+    applyItemEffects(effectType, value, nodeType = null, node = null, game = null) {
+        let result = value;
+        
+        // Apply primary effects
+        this.items.forEach(item => {
+            if (item.effect && item.effect.type === effectType) {
+                if (effectType === 'onNumberHit') {
+                    result = item.effect.action(result, nodeType, node, game);
+                } else if (effectType === 'onPegHit') {
+                    result = item.effect.action(result, node, null, game);
+                } else {
+                    result = item.effect.action(result);
+                }
+            }
+        });
+        
+        // Apply secondary effects
+        this.items.forEach(item => {
+            if (item.secondaryEffect && item.secondaryEffect.type === effectType) {
+                if (effectType === 'onNumberHit') {
+                    result = item.secondaryEffect.action(result, nodeType, node, game);
+                } else if (effectType === 'onPegHit') {
+                    result = item.secondaryEffect.action(result, node, null, game);
+                } else {
+                    result = item.secondaryEffect.action(result);
+                }
+            }
+        });
+        
+        // Apply synergy effects
+        if ((effectType === 'onNumberHit' || effectType === 'onPegHit') && this.gameState.synergies) {
+            this.gameState.synergies.forEach(synergy => {
+                result = Math.floor(result * synergy.multiplier);
+            });
+        }
+        
+        // Apply temporary effects
+        if (effectType === 'onNumberHit' && this.gameState.temporaryEffects) {
+            this.gameState.temporaryEffects = this.gameState.temporaryEffects.filter(effect => {
+                if (effect.type === 'globalMultiplier' && effect.duration > 0) {
+                    result = Math.floor(result * effect.value);
+                    effect.duration--;
+                    return effect.duration > 0;
+                }
+                return true;
+            });
+        }
+        
+        return result;
+    }
+    
     checkForSynergies(newItem) {
         if (!newItem.synergies) return;
         
@@ -449,7 +814,7 @@ export class ItemSystem {
             this.uiManager.showSynergyAnimation();
         }
     }
-
+    
     activateSynergy(item1, item2) {
         const synergy = {
             items: [item1.id, item2.id],
@@ -468,43 +833,37 @@ export class ItemSystem {
             this.uiManager.addMessage(`🔄 SYNERGY DISCOVERED: ${item1.name} + ${item2.name}!`);
         }
     }
-
-    applyItemEffects(effectType, value, nodeType = null, node = null, game = null) {
-        let result = value;
-        
-        this.items.forEach(item => {
-            if (item.effect.type === effectType) {
-                if (effectType === 'onNumberHit') {
-                    result = item.effect.action(result, nodeType, node, game);
-                } else {
-                    result = item.effect.action(result);
-                }
-            }
-        });
-        
-        if (effectType === 'onNumberHit' && this.gameState.synergies) {
-            this.gameState.synergies.forEach(synergy => {
-                result = Math.floor(result * synergy.multiplier);
-            });
-        }
-        
-        if (effectType === 'onNumberHit' && this.gameState.temporaryEffects) {
-            this.gameState.temporaryEffects = this.gameState.temporaryEffects.filter(effect => {
-                if (effect.type === 'globalMultiplier' && effect.duration > 0) {
-                    result = Math.floor(result * effect.value);
-                    effect.duration--;
-                    return effect.duration > 0;
-                }
-                return true;
-            });
-        }
-        
-        return result;
-    }
-
+    
     resetItems() {
         this.items = [];
         this.gameState.items = this.items;
         this.gameState.synergies = [];
+    }
+    
+    // Generate an array of shop items for selection
+    generateShopItems(count = 3) {
+        const shopItems = [];
+        
+        // Guarantee at least one upgradeable item if available
+        const upgradeableItems = this.items.filter(item => item.level < 5);
+        if (upgradeableItems.length > 0 && Math.random() < 0.7) {
+            const baseItem = upgradeableItems[Math.floor(Math.random() * upgradeableItems.length)];
+            const upgrade = this.createUpgradedItem(baseItem);
+            if (upgrade) {
+                shopItems.push(upgrade);
+            }
+        }
+        
+        // Fill the rest with random items
+        while (shopItems.length < count) {
+            const item = this.generateRandomItem();
+            
+            // Ensure we don't have duplicates
+            if (!shopItems.some(shopItem => shopItem.id === item.id)) {
+                shopItems.push(item);
+            }
+        }
+        
+        return shopItems;
     }
 }
