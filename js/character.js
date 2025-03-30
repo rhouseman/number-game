@@ -2,7 +2,15 @@ export class Character {
     constructor(gameState, gameBoard) {
         this.gameState = gameState;
         this.gameBoard = gameBoard;
-        this.element = document.getElementById('numby'); // Changed 'Numby' to 'numby' to match the HTML
+        
+        // Add error checking for element
+        const numbyElement = document.getElementById('numby');
+        if (!numbyElement) {
+            console.error('Could not find Numby element with ID "numby"');
+            throw new Error('Numby element not found');
+        }
+        this.element = numbyElement;
+
         this.x = 0;
         this.y = 0;
         this.vx = 0;
