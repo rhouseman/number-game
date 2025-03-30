@@ -20,6 +20,7 @@ export class Character {
         this.gravity = 0.2;
         this.friction = 0.98;
         this.elasticity = 0.95; // Increased from 0.9 for more bounce
+        this.maxVelocity = 15; // Add maximum velocity cap
     }
 
     setPosition(x, y) {
@@ -44,6 +45,10 @@ export class Character {
         // Scale up velocity to account for larger grid spacing
         this.vx = vx * 1.2; // 20% boost to horizontal velocity
         this.vy = vy * 1.2; // 20% boost to vertical velocity
+        
+        // Apply velocity cap during launch
+        this.capVelocity();
+        
         this.isActive = true;
     }
 
@@ -56,6 +61,9 @@ export class Character {
         // Apply friction (air resistance)
         this.vx *= this.friction;
         this.vy *= this.friction;
+        
+        // Cap velocity to prevent excessive speed
+        this.capVelocity();
         
         // Update position
         this.x += this.vx;
@@ -123,11 +131,27 @@ export class Character {
             this.vy = Math.min(this.vy * 0.5, 0) - (Math.sqrt(this.vx * this.vx + this.vy * this.vy) * upwardBoost);
         }
         
+        // Cap velocity to prevent excessive speed after bounce
+        this.capVelocity();
+        
         // Ensure character doesn't get stuck inside peg
         const minDist = this.radius + this.gameBoard.pegRadius;
         if (dist < minDist) {
             this.x = pegX + nx * minDist;
             this.y = pegY + ny * minDist;
+        }
+    }
+
+    // Add new method to cap velocity
+    capVelocity() {
+        // Cap horizontal velocity
+        if (Math.abs(this.vx) > this.maxVelocity) {
+            this.vx = Math.sign(this.vx) * this.maxVelocity;
+        }
+        
+        // Cap vertical velocity
+        if (Math.abs(this.vy) > this.maxVelocity) {
+            this.vy = Math.sign(this.vy) * this.maxVelocity;
         }
     }
 
