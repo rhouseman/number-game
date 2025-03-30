@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Content-Type" content="text/javascript; charset=utf-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Numby's Number Factory</title>
     <link rel="stylesheet" href="./styles.css">
     <style>
@@ -129,6 +131,12 @@
             </div>
             <button id="close-stats-btn">Close</button>
         </div>
+    </div>
+    
+    <!-- Add touch control overlay for mobile -->
+    <div id="mobile-controls" class="mobile-only">
+        <div id="touch-indicator"></div>
+        <div id="mobile-help">Tap and drag to aim, release to launch</div>
     </div>
     
     <script type="module" src="./js/main.js"></script>

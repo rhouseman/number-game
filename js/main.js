@@ -45,6 +45,11 @@ class Game {
 
         this.boundSpeakGameOver = null; // Add property to store bound function
 
+        this.isMobile = this.checkIfMobile();
+        this.isTouching = false;
+        this.touchStartPosition = { x: 0, y: 0 };
+        this.trajectoryLine = null;
+
         this.initialize();
     }
 
@@ -58,15 +63,56 @@ class Game {
         setTimeout(() => {
             this.tutorialSystem.startTutorial();
         }, 1000);
+
+        // Add portrait mode warning if needed
+        if (this.isMobile) {
+            this.addPortraitWarning();
+        }
+    }
+
+    checkIfMobile() {
+        return (('ontouchstart' in window) || 
+                (navigator.maxTouchPoints > 0) || 
+                (navigator.msMaxTouchPoints > 0));
+    }
+
+    addPortraitWarning() {
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'portrait-warning';
+        warningDiv.innerHTML = `
+            <div class="portrait-warning-content">
+                <div class="portrait-warning-icon">📱↔️</div>
+                <h2>Rotate Your Device</h2>
+                <p>This game works best in landscape orientation.</p>
+                <button id="continue-anyway">Continue Anyway</button>
+            </div>
+        `;
+        document.body.appendChild(warningDiv);
+        
+        document.getElementById('continue-anyway').addEventListener('click', () => {
+            warningDiv.style.display = 'none';
+        });
     }
 
     setupEventListeners() {
-        // Game board mouse events for aiming and launching
+        // Game board interaction events (handle both mouse and touch)
         const gameBoard = document.querySelector('.game-board');
-        gameBoard.addEventListener('mousemove', (e) => this.updateMousePosition(e));
-        gameBoard.addEventListener('mouseenter', () => this.showCrosshair = true);
-        gameBoard.addEventListener('mouseleave', () => this.showCrosshair = false);
-        gameBoard.addEventListener('click', (e) => this.handleBoardClick(e));
+        
+        if (this.isMobile) {
+            // Touch events for mobile
+            gameBoard.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+            gameBoard.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+            gameBoard.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+            
+            // Prevent pinch zoom on game board
+            gameBoard.addEventListener('gesturestart', (e) => e.preventDefault());
+        } else {
+            // Mouse events for desktop
+            gameBoard.addEventListener('mousemove', (e) => this.updateMousePosition(e));
+            gameBoard.addEventListener('mouseenter', () => this.showCrosshair = true);
+            gameBoard.addEventListener('mouseleave', () => this.showCrosshair = false);
+            gameBoard.addEventListener('click', (e) => this.handleBoardClick(e));
+        }
         
         // Other UI event listeners
         document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
@@ -77,6 +123,121 @@ class Game {
         document.getElementById('stats-btn').addEventListener('click', () => this.showStats());
         document.getElementById('close-stats-btn').addEventListener('click', () => this.closeStats());
         document.getElementById('achievements-btn').addEventListener('click', () => this.showAchievements());
+        
+        // Handle orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.calculateBoardDimensions();
+            }, 300); // Small delay to ensure dimensions settled after rotation
+        });
+    }
+
+    handleTouchStart(event) {
+        if (this.character.isActive) return;
+        
+        event.preventDefault();
+        this.isTouching = true;
+        
+        const touch = event.touches[0];
+        const rect = event.currentTarget.getBoundingClientRect();
+        
+        this.touchStartPosition = {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+        
+        // Show touch indicator
+        const touchIndicator = document.getElementById('touch-indicator');
+        touchIndicator.style.display = 'block';
+        touchIndicator.style.left = `${this.touchStartPosition.x}px`;
+        touchIndicator.style.top = `${this.touchStartPosition.y}px`;
+        
+        // Create trajectory line if it doesn't exist
+        if (!this.trajectoryLine) {
+            this.trajectoryLine = document.createElement('div');
+            this.trajectoryLine.className = 'trajectory-path';
+            document.getElementById('pegboard').appendChild(this.trajectoryLine);
+        }
+    }
+
+    handleTouchMove(event) {
+        if (!this.isTouching || this.character.isActive) return;
+        
+        event.preventDefault();
+        
+        const touch = event.touches[0];
+        const rect = event.currentTarget.getBoundingClientRect();
+        const currentPosition = {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+        
+        // Calculate direction from character to touch
+        const characterPosition = this.character.getPosition();
+        const dx = currentPosition.x - characterPosition.x;
+        const dy = currentPosition.y - characterPosition.y;
+        const angle = Math.atan2(dy, dx);
+        
+        // Display trajectory line
+        const lineLength = 80;
+        this.trajectoryLine.style.display = 'block';
+        this.trajectoryLine.style.left = `${characterPosition.x}px`;
+        this.trajectoryLine.style.top = `${characterPosition.y}px`;
+        this.trajectoryLine.style.width = `${lineLength}px`;
+        this.trajectoryLine.style.transform = `rotate(${angle}rad)`;
+        
+        // Update angle display
+        const angleDegrees = Math.round(angle * (180 / Math.PI));
+        document.getElementById('angle-value').textContent = `${angleDegrees}°`;
+        
+        // Update touch indicator position
+        const touchIndicator = document.getElementById('touch-indicator');
+        touchIndicator.style.left = `${currentPosition.x}px`;
+        touchIndicator.style.top = `${currentPosition.y}px`;
+        
+        // Store for launch
+        this.mousePosition = currentPosition;
+    }
+
+    handleTouchEnd(event) {
+        if (!this.isTouching || this.character.isActive) return;
+        
+        event.preventDefault();
+        this.isTouching = false;
+        
+        // Hide touch indicator
+        document.getElementById('touch-indicator').style.display = 'none';
+        
+        // Hide trajectory line
+        if (this.trajectoryLine) {
+            this.trajectoryLine.style.display = 'none';
+        }
+        
+        // Launch Numby if we have a valid direction
+        if (this.mousePosition) {
+            this.launchTowardsMouse();
+        }
+    }
+
+    calculateBoardDimensions() {
+        // Get current board dimensions
+        const gameBoard = document.querySelector('.game-board');
+        const boardRect = gameBoard.getBoundingClientRect();
+        
+        // Update board dimensions
+        if (this.gameBoard) {
+            this.gameBoard.boardRect = boardRect;
+            
+            // If playing on mobile, also recalculate appropriate scale factors
+            if (this.isMobile) {
+                // Adjust peg size/spacing if needed based on screen size
+                const minDimension = Math.min(boardRect.width, boardRect.height);
+                if (minDimension < 400) {
+                    // Smaller pegs for small screens
+                    this.gameBoard.adjustForScreenSize(minDimension);
+                }
+            }
+        }
     }
 
     updateMousePosition(event) {

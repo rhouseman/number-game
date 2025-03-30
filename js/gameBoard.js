@@ -52,6 +52,28 @@ export class GameBoard {
         this.boardRect = this.boardElement.getBoundingClientRect();
     }
 
+    // Add method to adjust for smaller screens on mobile
+    adjustForScreenSize(minDimension) {
+        const scaleFactor = minDimension < 400 ? 0.8 : 1;
+        
+        // Scale peg radius
+        this.pegRadius = Math.floor(30 * scaleFactor);
+        
+        // Scale spacing
+        this.pegSpacing.edgeToEdge = Math.floor(60 * scaleFactor);
+        this.pegSpacing.wallToEdge = Math.floor(60 * scaleFactor);
+        
+        // If we're really on a small screen, reduce grid size
+        if (minDimension < 350) {
+            this.gridSize.cols = 4;
+        } else {
+            this.gridSize.cols = 5;
+        }
+        
+        // Update board dimensions
+        this.calculateBoardDimensions();
+    }
+
     generateBoard() {
         // Clear existing elements
         this.clearBoard();
@@ -429,6 +451,10 @@ export class GameBoard {
         peg.element.className = 'peg';
         peg.element.style.left = `${x}px`;
         peg.element.style.top = `${y}px`;
+        
+        // Make sure peg size matches current pegRadius (for mobile support)
+        peg.element.style.width = `${this.pegRadius * 2}px`;
+        peg.element.style.height = `${this.pegRadius * 2}px`;
         
         // Store grid coordinates as data attributes
         peg.element.dataset.row = row;
